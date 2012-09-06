@@ -12,6 +12,7 @@ GEM
     mime-types (1.19)
     multi_json (1.3.6)
     multipart-post (1.1.5)
+    oauth (0.4.7)
     oauth2 (0.8.0)
       faraday (~> 0.8)
       httpauth (~> 0.1)
@@ -24,12 +25,17 @@ GEM
     rest-client (1.6.7)
       mime-types (>= 1.16)
     sass (3.2.1)
+    simple_oauth (0.1.9)
     sinatra (1.3.3)
       rack (~> 1.3, >= 1.3.6)
       rack-protection (~> 1.2)
       tilt (~> 1.3, >= 1.3.3)
     tilt (1.3.3)
     time-ago-in-words (0.1.2)
+    twitter (3.7.0)
+      faraday (~> 0.8)
+      multi_json (~> 1.3)
+      simple_oauth (~> 0.1.6)
     weibo_2 (0.1.1)
       hashie (~> 1.2.0)
       json (~> 1.7.3)
@@ -41,7 +47,9 @@ PLATFORMS
 
 DEPENDENCIES
   haml
+  oauth
   sass
   sinatra
   time-ago-in-words
+  twitter
   weibo_2

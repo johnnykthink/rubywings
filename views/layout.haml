@@ -6,7 +6,11 @@
     %link{:href => "/screen.css", :rel =>"stylesheet", :type => "text/css", :media => "screen" }
   %body
     %h2=session[:test]
-    %a{:href => (session[:uid] ? "logout" : "connect")}=(session[:uid] ? "logout" : "connect")
+    %ul
+      %li
+        %a{:href => "weibo"}="weibo"
+      %li
+        %a{:href => "twitter"}="twitter"
+      %li
+        %a{:href => "logout"}="logout"
     = yield
-  %footer
-    %h6="http://github.com/simsicon/weibo_2"
