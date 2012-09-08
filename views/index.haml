@@ -1,10 +1,20 @@
--if @user
-  %p
-    %h5
-      hello! you are 
-      =@user.screen_name
-      
-  %h3
+%ul
+  %li
+    -if @weibo_user
+      %a{:href => "http://weibo.com/#{@weibo_user.screen_name}"}="Weibo: @"+@weibo_user.screen_name |
+      %a{:href => "logout_weibo"}="Logout Weibo"
+    -else
+      %a{:href => "weibo"}="Connect to Weibo"
+  %li
+    -if @twitter_user
+      %a{:href => "https://twitter.com/#{@twitter_user.screen_name}"}="Twitter: @"+@twitter_user.screen_name |
+      %a{:href => "logout_twitter"}="Logout Twitter"
+    -else
+      %a{:href => "twitter"}="Connect to Twitter"
+  %li
+    %a{:href => "logout"}="Logout All"
+-if @weibo_user or @twitter_user
+  %hr
   %form{:action => "/update", :method => "POST", :enctype => "multipart/form-data"}
     %textarea{:id => 'status', :name => "status", :cols => "62", :rows => "5"}
     %br

@@ -15,13 +15,13 @@ WeiboOAuth2::Config.redirect_uri = ENV['FABUNIAO_REDIRECT_URI']
 
 $twitter_callback_url = "http://127.0.0.1/twitter_callback"
 $consumer = OAuth::Consumer.new(
-    ENV['FABUNIAO_TWITTER_CONSUMER_KEY'],
-    ENV['FABUNIAO_TWITTER_CONSUMER_SECRET'], 
+    ENV['TWITTER_CONSUMER_KEY'],
+    ENV['TWITTER_CONSUMER_SECRET'], 
     :site => 'http://api.twitter.com')
 
 Twitter.configure do |config|
-    config.consumer_key = ENV['FABUNIAO_TWITTER_CONSUMER_KEY']
-    config.consumer_secret = ENV['FABUNIAO_TWITTER_CONSUMER_SECRET']
+    config.consumer_key = ENV['TWITTER_CONSUMER_KEY']
+    config.consumer_secret = ENV['TWITTER_CONSUMER_SECRET']
 end
 
 # Logger
@@ -29,27 +29,31 @@ use Rack::Logger
 $logger = Logger.new('logs/fabuniao.log')
 $logger.level = Logger::DEBUG
 
-before do
-    $logger.debug('------------------------------------')
-end
+#before do
+#end
 
 get '/' do
-    client = WeiboOAuth2::Client.new
-    if session[:access_token] && !client.authorized?
-        token = client.get_token_from_hash({:access_token => session[:access_token], :expires_at => session[:expires_at]}) 
-        p token.inspect
-        p token.validated?
+    weibo_client = WeiboOAuth2::Client.new
+    if session[:weibo_access_token] && !weibo_client.authorized?
+        token = weibo_client.get_token_from_hash({:access_token => session[:weibo_access_token], :expires_at => session[:weibo_expires_at]}) 
 
         unless token.validated?
-            reset_session
+            reset_weibo_session
             redirect '/weibo'
             return
         end
     end
-    if session[:uid]
-        @user = client.users.show_by_uid(session[:uid]) 
-        @statuses = client.statuses
+    @weibo_user = weibo_client.users.show_by_uid(session[:weibo_uid]) if session[:weibo_uid]
+
+    twitter_client = get_twitter_client
+    if twitter_client
+        @twitter_user = twitter_client.user
+    else
+        reset_twitter_session
+        redirect '/twitter'
+        return
     end
+
     haml :index
 end
 
@@ -60,34 +64,41 @@ end
 
 get '/weibo_callback' do
     client = WeiboOAuth2::Client.new
-    access_token = client.auth_code.get_token(params[:code].to_s)
-    session[:test] = access_token.params["uid"]
-    session[:uid] = access_token.params["uid"]
-    session[:access_token] = access_token.token
-    session[:expires_at] = access_token.expires_at
-    @user = client.users.show_by_uid(session[:uid].to_i)
+    weibo_access_token = client.auth_code.get_token(params[:code].to_s)
+    session[:weibo_uid] = weibo_access_token.params["uid"]
+    session[:weibo_access_token] = weibo_access_token.token
+    session[:weibo_expires_at] = weibo_access_token.expires_at
+    #@weibo_user = client.users.show_by_uid(session[:weibo_uid].to_i)
+    
     redirect '/'
 end
 
 get '/twitter' do
-    $request_token = $consumer.get_request_token(:oauth_callback => "http://127.0.0.1/twitter_callback")
-    $logger.debug("request_token")
-    $logger.debug($request_token)
-    session[:request_token] = $request_token
-    redirect $request_token.authorize_url(:oauth_callback => "http://127.0.0.1/twitter_callback")
+    twitter_request_token = $consumer.get_request_token(:oauth_callback => "http://127.0.0.1/twitter_callback")
+    session[:twitter_request_token] = twitter_request_token
+    redirect twitter_request_token.authorize_url(:oauth_callback => "http://127.0.0.1/twitter_callback")
 end
 
 get '/twitter_callback' do
-    $access_token = session[:request_token].get_access_token
-    $logger.debug("access_token")
-    $logger.debug($access_token)
-    twitter_client = Twitter::Client.new(
-        :oauth_token => $access_token.token,
-        :oauth_token_secret => $access_token.secret,
-    )
-    twitter_client.update("Testing via twiiter api.")
+    twitter_access_token = session[:twitter_request_token].get_access_token
+    session[:oauth_token] = twitter_access_token.token
+    session[:oauth_token_secret] = twitter_access_token.secret
+
+    twitter_client = get_twitter_client
+    session[:twitter_uid] = twitter_client.user.id
+
     redirect '/'
 end
+
+get '/logout_weibo' do
+    reset_weibo_session
+    redirect '/'
+end 
+
+get '/logout_twitter' do
+    reset_twitter_session
+    redirect '/'
+end 
 
 get '/logout' do
     reset_session
@@ -100,25 +111,62 @@ get '/screen.css' do
 end
 
 post '/update' do
-    client = WeiboOAuth2::Client.new
-    client.get_token_from_hash({:access_token => session[:access_token], :expires_at => session[:expires_at]}) 
-    statuses = client.statuses
+
+    $logger.debug('Update weibo...')
+    weibo_client = WeiboOAuth2::Client.new
+    weibo_client.get_token_from_hash({:access_token => session[:weibo_access_token], :expires_at => session[:weibo_expires_at]}) 
+    statuses = weibo_client.statuses
 
     unless params[:file] && (tmpfile = params[:file][:tempfile]) && (name = params[:file][:filename])
         statuses.update(params[:status])
+        $logger.debug('Weibo updated!')
     else
-        status = params[:status] || '图片'
-        pic = File.open(tmpfile.path)
-        statuses.upload(status, pic)
+        File.open(tmpfile.path) do |media|
+            statuses.upload(params[:status] || '', media)
+        end
+        $logger.debug('Weibo with photo updated!')
+    end
+
+    $logger.debug('Update twitter...')
+    twitter_client = Twitter::Client.new(
+        :oauth_token => session[:oauth_token],
+        :oauth_token_secret => session[:oauth_token_secret],
+    )
+    unless params[:file] && (tmpfile = params[:file][:tempfile]) && (name = params[:file][:filename])
+        twitter_client.update(params[:status])
+        $logger.debug('Tweet updated!')
+    else
+        File.open(tmpfile.path) do |media|
+            twitter_client.update_with_media(params[:status] || '', media)
+        end
+        $logger.debug('Tweet with photo updated!')
     end
 
     redirect '/'
 end
 
 helpers do 
+    def reset_weibo_session
+        session[:weibo_uid] = nil
+        session[:weibo_access_token] = nil
+        session[:weibo_expires_at] = nil
+    end
+
+    def reset_twitter_session
+        session[:twitter_uid] = nil
+        session[:twitter_oauth_token] = nil
+        session[:twitter_oauth_token_secret] = nil
+    end
+
     def reset_session
-        session[:uid] = nil
-        session[:access_token] = nil
-        session[:expires_at] = nil
+        reset_weibo_session
+        reset_twitter_session
+    end
+
+    def get_twitter_client
+        twitter_client = Twitter::Client.new(
+            :oauth_token => session[:oauth_token],
+            :oauth_token_secret => session[:oauth_token_secret],
+        )
     end
 end
