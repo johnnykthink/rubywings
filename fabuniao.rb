@@ -24,30 +24,16 @@ use Rack::Logger
 $logger = Logger.new('logs/fabuniao.log')
 $logger.level = Logger::DEBUG
 
-#before do
-#end
+before do
+    $logger.debug(session)
+    $logger.debug(session[:twitter_oauth_token])
+    $logger.debug(session[:twitter_oauth_token_secret])
+    $logger.debug(is_twitter_auth)
+end
 
 get '/' do
-    weibo_client = get_weibo_client
-    if session[:weibo_access_token] && !weibo_client.authorized?
-        token = weibo_client.get_token_from_hash({:access_token => session[:weibo_access_token], :expires_at => session[:weibo_expires_at]}) 
-
-        unless token.validated?
-            reset_weibo_session
-            redirect '/weibo'
-            return
-        end
-    end
-    @weibo_user = weibo_client.users.show_by_uid(session[:weibo_uid]) if session[:weibo_uid]
-
-    twitter_client = get_twitter_client
-    if twitter_client
-        @twitter_user = twitter_client.user
-    else
-        reset_twitter_session
-        redirect '/twitter'
-        return
-    end
+    @weibo_user = get_weibo_client.users.show_by_uid(session[:weibo_uid]) if is_weibo_auth
+    @twitter_user = get_twitter_client.user if session[:twitter_oauth_token] if is_twitter_auth
 
     haml :index
 end
@@ -163,10 +149,19 @@ helpers do
     end
 
     def get_twitter_client
-        return nil if not session[:twitter_oauth_token] or not session[:twitter_oauth_token_secret]
+        return nil if is_twitter_auth
+
         Twitter::Client.new(
             :oauth_token => session[:twitter_oauth_token],
             :oauth_token_secret => session[:twitter_oauth_token_secret],
         )
+    end
+
+    def is_weibo_auth
+        return session[:weibo_access_token]
+    end
+
+    def is_twitter_auth
+        return session[:twitter_oauth_token]
     end
 end
