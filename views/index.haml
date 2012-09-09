@@ -1,26 +1,31 @@
+%h1 Ruby Wings, Ruby Words.
 %ul
   %li
     -if @weibo_user
-      %a{:href => "http://weibo.com/#{@weibo_user.screen_name}"}="Weibo: @"+@weibo_user.screen_name |
-      %a{:href => "logout_weibo"}="Logout Weibo"
+      %a{:href => "http://weibo.com/#{@weibo_user.screen_name}"}
+        Weibo: @#{@weibo_user.screen_name} |
+      %a{:href => "logout_weibo"} Logout Weibo
     -else
-      %a{:href => "weibo"}="Connect to Weibo"
+      %a{:href => "weibo"} Connect to Weibo
   %li
     -if @twitter_user
-      %a{:href => "https://twitter.com/#{@twitter_user.screen_name}"}="Twitter: @"+@twitter_user.screen_name |
-      %a{:href => "logout_twitter"}="Logout Twitter"
+      %a{:href => "https://twitter.com/#{@twitter_user.screen_name}"}
+        Twitter: @#{@twitter_user.screen_name} |
+      %a{:href => "logout_twitter"} Logout Twitter
     -else
-      %a{:href => "twitter"}="Connect to Twitter"
+      %a{:href => "twitter"} Connect to Twitter
   %li
-    %a{:href => "logout"}="Logout All"
+    %a{:href => "logout"} Logout All
 -if @weibo_user or @twitter_user
   %hr
-  %form{:action => "/update", :method => "POST", :enctype => "multipart/form-data"}
-    %div
-      %textarea{:id => 'status', :name => "status", :cols => "62", :rows => "5"}
-    %div
-      %input{:id => 'tags', :name => 'tags',  :type => 'input'}
-    %div
-      %input{:id => 'file', :name => 'file',  :type => 'file'}
-    %div
-    %input{:type => "submit", :value => "Post"}
+  %form{:action => "/update",
+        :method => "POST",
+        :enctype => "multipart/form-data"}
+    .row
+      %textarea#status{:name => "status", :cols => "62", :rows => "5"}
+    .row
+      %input#tags{:name => 'tags',  :type => 'input'}
+    .row
+      %input#file{:name => 'file',  :type => 'file'}
+    .row
+      %input{:type => "submit", :value => "Bright Winds"}
