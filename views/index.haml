@@ -16,8 +16,11 @@
 -if @weibo_user or @twitter_user
   %hr
   %form{:action => "/update", :method => "POST", :enctype => "multipart/form-data"}
-    %textarea{:id => 'status', :name => "status", :cols => "62", :rows => "5"}
-    %br
-    %input{:id => 'file', :name => 'file',  :type => 'file'}
-    %br
-    %input{:type => "submit", :value => "Send"}
+    %div
+      %textarea{:id => 'status', :name => "status", :cols => "62", :rows => "5"}
+    %div
+      %input{:id => 'tags', :name => 'tags',  :type => 'input'}
+    %div
+      %input{:id => 'file', :name => 'file',  :type => 'file'}
+    %div
+    %input{:type => "submit", :value => "Post"}

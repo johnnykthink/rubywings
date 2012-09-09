@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 
-require 'rubygems'
-require 'oauth'
-require 'twitter'
-require 'weibo_2'
-require 'time-ago-in-words'
+%w(rubygems oauth twitter weibo_2 time-ago-in-words sinatra haml sass).each { |dependency| require dependency }
 
-%w(sinatra haml sass).each { |dependency| require dependency }
 enable :sessions
 
 WeiboOAuth2::Config.api_key = ENV['FABUNIAO_API_KEY']
@@ -46,7 +41,6 @@ get '/' do
     @weibo_user = weibo_client.users.show_by_uid(session[:weibo_uid]) if session[:weibo_uid]
 
     twitter_client = get_twitter_client
-    $logger.debug(twitter_client.inspect)
     if twitter_client
         @twitter_user = twitter_client.user
     else
@@ -113,31 +107,34 @@ end
 
 post '/update' do
 
-    $logger.debug('Update weibo...')
+    $logger.debug('Update weibo and tweet...')
+
     weibo_client = WeiboOAuth2::Client.new
     weibo_client.get_token_from_hash({:access_token => session[:weibo_access_token], :expires_at => session[:weibo_expires_at]}) 
     statuses = weibo_client.statuses
 
-    unless params[:file] && (tmpfile = params[:file][:tempfile]) && (name = params[:file][:filename])
-        statuses.update(params[:status])
-        $logger.debug('Weibo updated!')
-    else
-        File.open(tmpfile.path) do |media|
-            statuses.upload(params[:status] || '', media)
-        end
-        $logger.debug('Weibo with photo updated!')
-    end
-
-    $logger.debug('Update twitter...')
     twitter_client = get_twitter_client
+
+    tags_arr = params[:tags].split(/,+\s+|\s+|,+/)
+    weibo_tags = tags_arr.map {|tag| "##{tag}#"}.join(" ")
+    twitter_tags = tags_arr.map {|tag| "##{tag}"}.join(" ")
+
     unless params[:file] && (tmpfile = params[:file][:tempfile]) && (name = params[:file][:filename])
-        twitter_client.update(params[:status])
+        $logger.debug([params[:status], weibo_tags].join(" "))
+        #statuses.update([params[:status], weibo_tags].join(" "))
+        $logger.debug('Weibo updated!')
+
+        $logger.debug(([params[:status], twitter_tags].join(" ")))
+        #twitter_client.update(([params[:status], twitter_tags].join(" ")))
         $logger.debug('Tweet updated!')
     else
         File.open(tmpfile.path) do |media|
+            statuses.upload(params[:status] || '', media)
+            $logger.debug('Weibo with photo updated!')
+
             twitter_client.update_with_media(params[:status] || '', media)
+            $logger.debug('Tweet with photo updated!')
         end
-        $logger.debug('Tweet with photo updated!')
     end
 
     redirect '/'
