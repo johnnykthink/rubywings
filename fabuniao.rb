@@ -26,9 +26,6 @@ $logger.level = Logger::DEBUG
 
 before do
     $logger.debug(session)
-    $logger.debug(session[:twitter_oauth_token])
-    $logger.debug(session[:twitter_oauth_token_secret])
-    $logger.debug(is_twitter_auth)
 end
 
 get '/' do
@@ -49,7 +46,6 @@ get '/weibo_callback' do
     session[:weibo_uid] = weibo_access_token.params["uid"]
     session[:weibo_access_token] = weibo_access_token.token
     session[:weibo_expires_at] = weibo_access_token.expires_at
-    #@weibo_user = weibo_client.users.show_by_uid(session[:weibo_uid].to_i)
     
     redirect '/'
 end
@@ -92,34 +88,37 @@ get '/screen.css' do
 end
 
 post '/update' do
-
     $logger.debug('Update weibo and tweet...')
 
-    weibo_client = WeiboOAuth2::Client.new
-    weibo_client.get_token_from_hash({:access_token => session[:weibo_access_token], :expires_at => session[:weibo_expires_at]}) 
+    weibo_client = get_weibo_client
     statuses = weibo_client.statuses
 
     twitter_client = get_twitter_client
 
+    # Parse tags
     tags_arr = params[:tags].split(/,+\s+|\s+|,+/)
     weibo_tags = tags_arr.map {|tag| "##{tag}#"}.join(" ")
     twitter_tags = tags_arr.map {|tag| "##{tag}"}.join(" ")
 
     unless params[:file] && (tmpfile = params[:file][:tempfile]) && (name = params[:file][:filename])
-        $logger.debug([params[:status], weibo_tags].join(" "))
-        #statuses.update([params[:status], weibo_tags].join(" "))
-        $logger.debug('Weibo updated!')
+        text = [params[:status], weibo_tags].join(" ")
+        $logger.debug(text)
 
-        $logger.debug(([params[:status], twitter_tags].join(" ")))
-        #twitter_client.update(([params[:status], twitter_tags].join(" ")))
-        $logger.debug('Tweet updated!')
+        #statuses.update(text)
+        $logger.info("Weibo(#{text}) updated!")
+
+        #twitter_client.update(text
+        $logger.info("Tweet(#{text}) updated!")
     else
-        File.open(tmpfile.path) do |media|
-            statuses.upload(params[:status] || '', media)
-            $logger.debug('Weibo with photo updated!')
+        text = [params[:status], weibo_tags].join(" ")
+        $logger.debug(text)
 
-            twitter_client.update_with_media(params[:status] || '', media)
-            $logger.debug('Tweet with photo updated!')
+        File.open(tmpfile.path) do |media|
+            #statuses.upload(text, media)
+            $logger.info("Weibo(#{text}) with photo updated!")
+
+            #twitter_client.update_with_media(text, media)
+            $logger.info("Tweet(#{text}) with photo updated!")
         end
     end
 
@@ -145,7 +144,15 @@ helpers do
     end
 
     def get_weibo_client
-        WeiboOAuth2::Client.new
+        weibo_client = WeiboOAuth2::Client.new
+        if session[:weibo_access_token] && !weibo_client.authorized?
+            weibo_hash = {
+                :access_token => session[:weibo_access_token], 
+                :expires_at => session[:weibo_expires_at]
+            }
+            weibo_client.get_token_from_hash(weibo_hash) 
+        end
+        weibo_client 
     end
 
     def get_twitter_client
