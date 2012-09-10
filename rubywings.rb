@@ -6,7 +6,7 @@
 enable :sessions
 
 APP_NAME = 'Ruby Wings'
-APP_VERSION = '0.1'
+APP_VERSION = '0.2'
 BASE_URL = 'http://127.0.0.1'
 
 Encoding.default_external = Encoding::UTF_8
