@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-require './fabuniao.rb'
+require './rubywings.rb'
 
 set :session_secret, 'i am a secret'
 

@@ -1,3 +1,3 @@
-# Fabuniao
+# Ruby Wings
 
-Post to Weibo/Twitter/G+ in one place.
+Post to Weibo/Twitter in one place.

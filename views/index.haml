@@ -1,22 +1,22 @@
 %h1 Ruby Wings, Ruby Words.
 %ul
   %li
-    -if @weibo_user
-      %a{:href => "http://weibo.com/#{@weibo_user.screen_name}"}
-        Weibo: @#{@weibo_user.screen_name} |
+    -if session[:weibo_access_token]
+      / %a{:href => "http://weibo.com/#{@weibo_user['screen_name']}"}
+      / Weibo: @#{@weibo_user['screen_name']} |
       %a{:href => "logout_weibo"} Logout Weibo
     -else
       %a{:href => "weibo"} Connect to Weibo
   %li
-    -if @twitter_user
-      %a{:href => "https://twitter.com/#{@twitter_user.screen_name}"}
-        Twitter: @#{@twitter_user.screen_name} |
+    -if session[:twitter_oauth_token]
+      / %a{:href => "https://twitter.com/#{@twitter_user['screen_name']}"}
+      / Twitter: @#{@twitter_user['screen_name']} |
       %a{:href => "logout_twitter"} Logout Twitter
     -else
       %a{:href => "twitter"} Connect to Twitter
   %li
     %a{:href => "logout"} Logout All
--if @weibo_user or @twitter_user
+-if session[:weibo_access_token] || session[:twitter_oauth_token]
   %hr
   %form{:action => "/update",
         :method => "POST",
@@ -28,4 +28,4 @@
     .row
       %input#file{:name => 'file',  :type => 'file'}
     .row
-      %input{:type => "submit", :value => "Bright Winds"}
+      %input{:type => "submit", :value => "Ruby Wings"}
