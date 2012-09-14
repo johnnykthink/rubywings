@@ -1,23 +1,23 @@
 %h1 Ruby Wings, Ruby Words.
 %ul
   %li
-    -if session[:weibo_access_token]
-      / %a{:href => "http://weibo.com/#{@weibo_user['screen_name']}"}
-      / Weibo: @#{@weibo_user['screen_name']} |
-      %a{:href => "logout_weibo"} Logout Weibo
+    %a{:href => "weibo"} Connect to Weibo
+    -if $user && session['weibo_uid']
+      %a{:href => "signout_weibo"} Sign out Weibo
     -else
-      %a{:href => "weibo"} Connect to Weibo
   %li
-    -if session[:twitter_oauth_token]
-      / %a{:href => "https://twitter.com/#{@twitter_user['screen_name']}"}
-      / Twitter: @#{@twitter_user['screen_name']} |
-      %a{:href => "logout_twitter"} Logout Twitter
+    %a{:href => "twitter"} Connect to Twitter
+    -if $user && session['twitter_uid']
+      %a{:href => "signout_twitter"} Sign out Twitter
     -else
-      %a{:href => "twitter"} Connect to Twitter
   %li
-    %a{:href => "logout"} Logout All
--if session[:weibo_access_token] || session[:twitter_oauth_token]
-  %hr
+    -if $user
+      %span=$user['name']
+      %a{:href => "signout"} Sign out
+    -else
+      %a{:href => "/auth/open_id"} Sign in
+%hr
+-if $user
   %form{:action => "/update",
         :method => "POST",
         :enctype => "multipart/form-data"}

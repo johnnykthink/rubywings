@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
-%w(rubygems oauth twitter weibo_2 sinatra haml sass).each { |d| require d }
+%w(rubygems oauth twitter weibo_2 omniauth).each { |d| require d }
+%w(omniauth-openid openid/store/filesystem).each { |d| require d }
+%w(redis sinatra haml sass).each { |d| require d }
 
 # Use session in Sinatra, don't forget to set secret key in config.ru.
 enable :sessions
@@ -35,69 +37,167 @@ use Rack::Logger
 $logger = Logger.new('logs/debug.log')
 $logger.level = Logger::DEBUG
 
+# Openid
+use Rack::Session::Cookie
+use OmniAuth::Builder do
+    provider :open_id, :store => OpenID::Store::Filesystem.new('/tmp')
+end
+
+# Redis
+REDIS_CONF = {
+    :host => '127.0.0.1',
+    :port => 10002,
+}
+$r = Redis.new(REDIS_CONF)
+
 ##############################################################################
 
+before do
+    if session[:user_id]
+        $user = $r.hgetall("user:#{session[:user_id]}")
+
+        weibo = $r.hgetall("user.weibo.auth:#{$user['id']}")
+        if weibo 
+            session[:weibo_uid] = weibo['user_id']
+            session[:weibo_access_token] = weibo['access_token']
+            session[:weibo_expires_at] = weibo['expires_at']
+        end
+
+        twitter = $r.hgetall("user.twitter.auth:#{$user['id']}")
+        if twitter
+            session[:twitter_uid] = twitter['user_id']
+            session[:twitter_oauth_token] = twitter['oauth_token']
+            session[:twitter_oauth_token_secret] = twitter['oauth_token_secret']
+        end
+    else
+        $user = nil
+    end
+    $logger.debug("#{$user} - #{session[:weibo_uid]} - #{session[:twitter_uid]}")
+end
+
+[:get, :post].each do |method|
+    send method, '/auth/:provider/callback' do
+        #$logger.debug(request.env['omniauth.auth'].info)
+        #request.env['omniauth.auth'].info.to_hash.inspect
+
+        data = request.env['omniauth.auth'].info
+        user_id = $r.get("email.to.id:#{data['email']}")
+        if user_id
+            $user = $r.hgetall("user:#{user_id}")
+        else
+            # Create a new user.
+            id = $r.incr("users.count")
+            $r.hmset("user:#{id}",
+                "id", id,
+                "email", data['email'],
+                "name", data['name'],
+                "nickname", data['nickname'],
+                "password", "",
+                "ctime", Time.now.to_i)
+            $r.set("email.to.id:#{data['email']}", id)
+            $r.zadd("users.cron", Time.now.to_i, id)
+
+            $user = $r.hgetall("user:#{id}")
+        end
+
+        session['user_id'] = $user['id']
+        weibo = $r.hgetall("user.weibo.auth:#{$user['id']}")
+        if weibo 
+            session[:weibo_uid] = weibo['user_id']
+            session[:weibo_access_token] = weibo['access_token']
+            session[:weibo_expires_at] = weibo['expires_at']
+        end
+        twitter = $r.hgetall("user.twitter.auth:#{$user['id']}")
+        if twitter
+            session[:twitter_uid] = twitter['user_id']
+            session[:twitter_oauth_token] = twitter['oauth_token']
+            session[:twitter_oauth_token_secret] = twitter['oauth_token_secret']
+        end
+
+        redirect '/'
+    end
+end
+
+#error OpenIDAuthError do
+#    "Oops, could u pls use yourid.myopenid.com? We're struggling with other openid provider :("
+#end
+#
+#[:get, :post].each do |method|
+#    send method, '/auth/failure' do
+#        raise OpenIDAuthError, ''
+#    end
+#end
+
 get '/' do
-    #@weibo_user = get_weibo_client.users.show_by_uid(session[:weibo_uid]) if session[:weibo_access_token]
-    #@twitter_user = get_twitter_client.user if session[:twitter_oauth_token]
-    
+    redirect '/auth/open_id' if !$user
     haml :index
 end
 
 get '/weibo' do
+    redirect '/auth/open_id' if !$user
+
     weibo_client = get_weibo_client
     redirect weibo_client.authorize_url
 end
 
 get '/weibo_callback' do
+    redirect '/auth/open_id' if !$user
+
     weibo_client = get_weibo_client
     weibo_access_token = weibo_client.auth_code.get_token(params[:code].to_s)
     session[:weibo_uid] = weibo_access_token.params["uid"]
     session[:weibo_access_token] = weibo_access_token.token
     session[:weibo_expires_at] = weibo_access_token.expires_at
+    $r.hmset("user.weibo.auth:#{$user['id']}",
+             "user_id", session[:weibo_uid],
+             "access_token", session[:weibo_access_token],
+             "expires_at", session[:weibo_expires_at])
     $logger.debug("Weibo token: #{session[:weibo_access_token]}")
     
     redirect '/'
 end
 
 get '/twitter' do
+    redirect '/auth/open_id' if !$user
+    
     # Start the process by requesting a token
     twitter_request_token = $TWITTER_CONSUMER.get_request_token(:oauth_callback => TWITTER_CALLBACK_URL)
     # Not authorized yet, store this request token in session.
     # Retrieving it after Twitter oauth service popluated it. 
     session[:twitter_request_token] = twitter_request_token
+    
     redirect twitter_request_token.authorize_url(:oauth_callback => TWITTER_CALLBACK_URL)
 end
 
 get '/twitter_callback' do
+    redirect '/auth/open_id' if !$user
+    
     # When user returns create an access_token
     twitter_access_token = session[:twitter_request_token].get_access_token
     session[:twitter_oauth_token] = twitter_access_token.token
     session[:twitter_oauth_token_secret] = twitter_access_token.secret
-    $logger.debug("Twitter token: #{session[:twitter_oauth_token]}")
-    $logger.debug("Twitter secret: #{session[:twitter_oauth_token_secret]}")
-
     twitter_client = get_twitter_client
-    if !twitter_client
-        $logger.debug("Twitter client is nil, fuck!")
-    else
-        session[:twitter_uid] = twitter_client.user.id
-    end
+    session[:twitter_uid] = twitter_client.user.id
+
+    $r.hmset("user.twitter.auth:#{$user['id']}",
+             "user_id", session[:twitter_uid],
+             "oauth_token", session[:twitter_oauth_token],
+             "oauth_token_secret", session[:twitter_oauth_token_secret])
 
     redirect '/'
 end
 
-get '/logout_weibo' do
+get '/signout_weibo' do
     reset_weibo_session
     redirect '/'
 end 
 
-get '/logout_twitter' do
+get '/signout_twitter' do
     reset_twitter_session
     redirect '/'
 end 
 
-get '/logout' do
+get '/signout' do
     reset_session
     redirect '/'
 end 
@@ -108,6 +208,8 @@ get '/screen.css' do
 end
 
 post '/update' do
+    redirect '/auth/open_id' if !$user
+    
     $logger.debug('Update weibo and tweet...')
 
     # Parse tags
@@ -167,6 +269,7 @@ helpers do
     def reset_session
         reset_weibo_session
         reset_twitter_session
+        session[:user_id] = nil
     end
 
     def get_weibo_client
@@ -189,3 +292,16 @@ helpers do
     end
 
 end
+
+__END__
+
+# Just showing off inline template in Sinatra :)
+
+@@ layout
+%html
+    %head
+        %meta(content='text/html;charset=UTF-8' http-equiv='content-type')
+        %title="Ruby Wings - Bring your words to Twitter, Weibo and more"
+        %link{:href => "/screen.css", :rel =>"stylesheet", :type => "text/css", :media => "screen"}
+    %body
+        = yield
