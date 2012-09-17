@@ -9,7 +9,7 @@ enable :sessions
 
 APP_NAME = 'Ruby Wings'
 APP_VERSION = '0.2'
-BASE_URL = 'http://127.0.0.1'
+BASE_URL = 'http://127.0.0.1/rubywings'
 
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
@@ -34,8 +34,8 @@ end
 
 # Logger
 use Rack::Logger
-$logger = Logger.new('logs/debug.log')
-$logger.level = Logger::DEBUG
+$logger = Logger.new('logs/app.log')
+$logger.level = Logger::INFO
 
 # Openid
 use Rack::Session::Cookie
@@ -114,7 +114,7 @@ end
             session[:twitter_oauth_token_secret] = twitter['oauth_token_secret']
         end
 
-        redirect '/'
+        redirect BASE_URL
     end
 end
 
@@ -154,7 +154,7 @@ get '/weibo_callback' do
              "expires_at", session[:weibo_expires_at])
     $logger.debug("Weibo token: #{session[:weibo_access_token]}")
     
-    redirect '/'
+    redirect BASE_URL
 end
 
 get '/twitter' do
@@ -184,22 +184,22 @@ get '/twitter_callback' do
              "oauth_token", session[:twitter_oauth_token],
              "oauth_token_secret", session[:twitter_oauth_token_secret])
 
-    redirect '/'
+    redirect BASE_URL
 end
 
 get '/signout_weibo' do
     reset_weibo_session
-    redirect '/'
+    redirect BASE_URL
 end 
 
 get '/signout_twitter' do
     reset_twitter_session
-    redirect '/'
+    redirect BASE_URL
 end 
 
 get '/signout' do
     reset_session
-    redirect '/'
+    redirect BASE_URL
 end 
 
 get '/screen.css' do
@@ -210,7 +210,7 @@ end
 post '/update' do
     redirect '/auth/open_id' if !$user
     
-    $logger.debug('Update weibo and tweet...')
+    $logger.info('Update weibo and tweet...')
 
     # Parse tags
     tags_arr = params[:tags].split(/,+\s+|\s+|,+/)
@@ -250,7 +250,7 @@ post '/update' do
         end
     end
 
-    redirect '/'
+    redirect BASE_URL
 end
 
 helpers do 
@@ -302,6 +302,6 @@ __END__
     %head
         %meta(content='text/html;charset=UTF-8' http-equiv='content-type')
         %title="Ruby Wings - Bring your words to Twitter, Weibo and more"
-        %link{:href => "/screen.css", :rel =>"stylesheet", :type => "text/css", :media => "screen"}
+        %link{:href => "/rubywings/screen.css", :rel =>"stylesheet", :type => "text/css", :media => "screen"}
     %body
         = yield

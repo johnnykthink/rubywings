@@ -1,24 +1,24 @@
 %h1 Ruby Wings, Ruby Words.
 %ul
   %li
-    %a{:href => "weibo"} Connect to Weibo
+    %a{:href => "/rubywings/weibo"} Connect to Weibo
     -if $user && session['weibo_uid']
-      %a{:href => "signout_weibo"} Sign out Weibo
+      %a{:href => "/rubywings/signout_weibo"} Sign out Weibo
     -else
   %li
-    %a{:href => "twitter"} Connect to Twitter
+    %a{:href => "/rubywings/twitter"} Connect to Twitter
     -if $user && session['twitter_uid']
-      %a{:href => "signout_twitter"} Sign out Twitter
+      %a{:href => "/rubywings/signout_twitter"} Sign out Twitter
     -else
   %li
     -if $user
       %span=$user['name']
-      %a{:href => "signout"} Sign out
+      %a{:href => "/rubywings/signout"} Sign out
     -else
       %a{:href => "/auth/open_id"} Sign in
 %hr
 -if $user
-  %form{:action => "/update",
+  %form{:action => "/rubywings/update",
         :method => "POST",
         :enctype => "multipart/form-data"}
     .row
