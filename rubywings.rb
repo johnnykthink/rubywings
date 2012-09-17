@@ -123,19 +123,19 @@ end
 #end
 
 get '/' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
     haml :index
 end
 
 get '/weibo' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
 
     weibo_client = get_weibo_client
     redirect weibo_client.authorize_url
 end
 
 get '/weibo_callback' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
 
     weibo_client = get_weibo_client
     weibo_access_token = weibo_client.auth_code.get_token(params[:code].to_s)
@@ -152,7 +152,7 @@ get '/weibo_callback' do
 end
 
 get '/twitter' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
     
     # Start the process by requesting a token
     twitter_request_token = $TWITTER_CONSUMER.get_request_token(:oauth_callback => TWITTER_CALLBACK_URL)
@@ -164,7 +164,7 @@ get '/twitter' do
 end
 
 get '/twitter_callback' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
     
     # When user returns create an access_token
     twitter_access_token = session[:twitter_request_token].get_access_token
@@ -202,7 +202,7 @@ get '/screen.css' do
 end
 
 post '/update' do
-    redirect '/auth/open_id' if !$user
+    redirect '/rubywings/auth/open_id' if !$user
     
     $logger.info('Update weibo and tweet...')
 
