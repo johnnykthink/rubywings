@@ -8,8 +8,9 @@
 enable :sessions
 
 APP_NAME = 'Ruby Wings'
-APP_VERSION = '0.2'
-BASE_URL = 'http://127.0.0.1/rubywings'
+APP_VERSION = '0.3'
+BASE_URL = 'http://imwilsonxu.net/rubywings'
+#BASE_URL = 'http://127.0.0.1/rubywings'
 
 Encoding.default_external = Encoding::UTF_8
 Encoding.default_internal = Encoding::UTF_8
@@ -34,7 +35,7 @@ end
 
 # Logger
 use Rack::Logger
-$logger = Logger.new('logs/app.log')
+$logger = Logger.new('logs/rubywings.log')
 $logger.level = Logger::INFO
 
 # Openid
@@ -42,13 +43,6 @@ use Rack::Session::Cookie
 use OmniAuth::Builder do
     provider :open_id, :store => OpenID::Store::Filesystem.new('/tmp')
 end
-
-# Redis
-REDIS_CONF = {
-    :host => '127.0.0.1',
-    :port => 10002,
-}
-$r = Redis.new(REDIS_CONF)
 
 ##############################################################################
 
