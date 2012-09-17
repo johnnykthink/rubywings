@@ -33,6 +33,9 @@ Twitter.configure do |config|
     config.consumer_secret = ENV['TWITTER_CONSUMER_SECRET']
 end
 
+# Redis
+$r = Redis.new(:host => '127.0.0.1', :port => '100001')
+
 # Logger
 use Rack::Logger
 $logger = Logger.new('logs/rubywings.log')
