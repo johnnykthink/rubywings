@@ -15,7 +15,7 @@
       %span=$user['name']
       %a{:href => "/rubywings/signout"} Sign out
     -else
-      %a{:href => "/auth/open_id"} Sign in
+      %a{:href => "/rubywings/auth/open_id"} Sign in
 %hr
 -if $user
   %form{:action => "/rubywings/update",
