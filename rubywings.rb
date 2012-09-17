@@ -34,7 +34,7 @@ Twitter.configure do |config|
 end
 
 # Redis
-$r = Redis.new(:host => '127.0.0.1', :port => '100001')
+$r = Redis.new(:host => '127.0.0.1', :port => '10001')
 
 # Logger
 use Rack::Logger
